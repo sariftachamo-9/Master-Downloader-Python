@@ -35,12 +35,12 @@ if (hasCredentials) {
   try {
     client = createClient(supabaseUrl, supabaseAnonKey);
     isConfigured = true;
-    console.log('Supabase client successfully initialized.');
+    console.log('✅ Supabase cloud database connected.');
   } catch (error) {
     console.error('Failed to initialize Supabase client:', error.message);
   }
 } else {
-  console.warn('WARNING: Supabase URL and/or Anon Key not configured in .env. System will fall back to local in-memory records.');
+  console.log('ℹ️  Storage Mode: Local in-memory active (Configure SUPABASE_URL & SUPABASE_ANON_KEY in .env for cloud sync).');
 }
 
 // Database helper functions abstraction

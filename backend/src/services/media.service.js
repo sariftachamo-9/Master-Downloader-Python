@@ -121,26 +121,42 @@ async function ensureMediaFile(url, mediaId, formatId) {
   const isAudio = formatId === 'audio_mp3';
   const baseName = `${mediaId}_${formatId || 'default'}`;
 
-  // Check for any cached files matching baseName
-  const candidateExtensions = isAudio ? ['mp3'] : ['mp4', 'mkv', 'webm', 'jpg', 'jpeg', 'png', 'webp'];
+  // Check for exact cached file matching baseName
+  const candidateExtensions = isAudio ? ['mp3'] : ['mp4', 'mkv', 'webm'];
   for (const ext of candidateExtensions) {
     const candidateFile = path.join(CACHE_DIR, `${baseName}.${ext}`);
-    if (fs.existsSync(candidateFile) && fs.statSync(candidateFile).size > 1000) {
+    if (fs.existsSync(candidateFile) && fs.statSync(candidateFile).size > 50000) {
       return { filePath: candidateFile, ext };
     }
   }
 
-  // Check default file
+  // Check default prepared files
   for (const ext of candidateExtensions) {
-    const defaultFile = path.join(CACHE_DIR, `${mediaId}.${ext}`);
-    if (!formatId && fs.existsSync(defaultFile) && fs.statSync(defaultFile).size > 1000) {
+    const defaultFile = path.join(CACHE_DIR, `${mediaId}_default.${ext}`);
+    if (!formatId && fs.existsSync(defaultFile) && fs.statSync(defaultFile).size > 50000) {
       return { filePath: defaultFile, ext };
+    }
+    const rawFile = path.join(CACHE_DIR, `${mediaId}.${ext}`);
+    if (!formatId && fs.existsSync(rawFile) && fs.statSync(rawFile).size > 50000) {
+      return { filePath: rawFile, ext };
     }
   }
 
   logger.info(`Generating media file on demand for mediaId: ${mediaId} (format: ${formatId || 'default'})`);
-  const result = await runEngine('download', url, formatId);
-  return { filePath: result.filePath, ext: result.format || 'mp4' };
+  try {
+    const result = await runEngine('download', url, formatId);
+    return { filePath: result.filePath, ext: result.format || 'mp4' };
+  } catch (err) {
+    // If specific format failed, check if default file is available as fallback
+    for (const ext of candidateExtensions) {
+      const defaultFile = path.join(CACHE_DIR, `${mediaId}_default.${ext}`);
+      if (fs.existsSync(defaultFile) && fs.statSync(defaultFile).size > 50000) {
+        logger.warn(`Delivering cached default file for failed format ${formatId}`);
+        return { filePath: defaultFile, ext };
+      }
+    }
+    throw err;
+  }
 }
 
 module.exports = {

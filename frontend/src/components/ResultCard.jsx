@@ -105,9 +105,23 @@ export default function ResultCard({ result }) {
 
       <div className="result-info">
         <div className="result-header">
-          <span className={`result-platform ${result.platform}`}>
-            {(result.platform || 'WEB').toUpperCase()}
-          </span>
+          <div className="platform-and-tags">
+            <span className={`result-platform ${result.platform}`}>
+              {(result.platform || 'WEB').toUpperCase()}
+            </span>
+            {formats.some(f => f.label?.includes('4K') || f.label?.includes('2160p')) && (
+              <span className="badge-4k">✨ 4K ULTRA HD</span>
+            )}
+            {formats.some(f => f.label?.includes('1080p')) && !formats.some(f => f.label?.includes('4K')) && (
+              <span className="badge-fhd">💎 FULL HD</span>
+            )}
+            {formats.some(f => f.label?.includes('60fps')) && (
+              <span className="badge-fps">⚡ 60 FPS</span>
+            )}
+            {isImage && (
+              <span className="badge-img">📸 RAW RESOLUTION</span>
+            )}
+          </div>
           <span className="result-duration">
             {isImage ? '🖼️ Photo' : isGallery ? `📚 ${result.gallery.length} Photos` : `⏱️ ${result.duration}`}
           </span>
@@ -118,26 +132,62 @@ export default function ResultCard({ result }) {
 
         <div className="result-metadata">
           <div className="meta-item">
-            <span className="meta-label">File Size</span>
-            <span className="meta-value">{result.formattedSize || 'Optimized'}</span>
+            <span className="meta-label">Est. File Size</span>
+            <span className="meta-value">{result.formattedSize || 'Full HD Stream'}</span>
           </div>
           <div className="meta-item">
-            <span className="meta-label">Quality Mode</span>
+            <span className="meta-label">Engine Fidelity</span>
             <span className="meta-value text-green">
-              {isImage ? 'Original Uncompressed' : 'Maximum Fidelity (Lossless)'}
+              {isImage ? 'Original Uncompressed' : '100% Lossless FFmpeg Merged'}
             </span>
           </div>
         </div>
 
         {!isImage && formats.length > 0 && (
           <div className="quality-selector-box">
-            <label className="format-label">Select Resolution / Quality:</label>
+            <div className="format-header-row">
+              <label className="format-label">Select Resolution / Format:</label>
+              <div className="quick-format-pills">
+                <button 
+                  type="button" 
+                  className={`pill-btn ${selectedFormat === '' ? 'active' : ''}`}
+                  onClick={() => setSelectedFormat('')}
+                >
+                  ✨ Max Quality
+                </button>
+                {formats.find(f => f.label?.includes('1080p')) && (
+                  <button 
+                    type="button" 
+                    className={`pill-btn ${selectedFormat === formats.find(f => f.label?.includes('1080p'))?.formatId ? 'active' : ''}`}
+                    onClick={() => setSelectedFormat(formats.find(f => f.label?.includes('1080p'))?.formatId || '')}
+                  >
+                    1080p
+                  </button>
+                )}
+                {formats.find(f => f.label?.includes('720p')) && (
+                  <button 
+                    type="button" 
+                    className={`pill-btn ${selectedFormat === formats.find(f => f.label?.includes('720p'))?.formatId ? 'active' : ''}`}
+                    onClick={() => setSelectedFormat(formats.find(f => f.label?.includes('720p'))?.formatId || '')}
+                  >
+                    720p
+                  </button>
+                )}
+                <button 
+                  type="button" 
+                  className={`pill-btn pill-audio ${selectedFormat === 'audio_mp3' ? 'active' : ''}`}
+                  onClick={() => setSelectedFormat('audio_mp3')}
+                >
+                  🎵 MP3 (320k)
+                </button>
+              </div>
+            </div>
             <select 
               className="format-select"
               value={selectedFormat} 
               onChange={(e) => setSelectedFormat(e.target.value)}
             >
-              <option value="">✨ Best Quality Available (4K / 1080p Original)</option>
+              <option value="">✨ Best Quality Available (Auto Maximum Resolution)</option>
               {formats.map((fmt, idx) => (
                 <option key={idx} value={fmt.formatId}>
                   {fmt.label} {fmt.sizeFormatted !== 'N/A' && fmt.sizeFormatted !== 'Audio' ? `• ${fmt.sizeFormatted}` : ''}
@@ -297,6 +347,88 @@ export default function ResultCard({ result }) {
           align-items: center;
           justify-content: space-between;
         }
+        .platform-and-tags {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .badge-4k {
+          background: linear-gradient(135deg, #f59e0b, #ef4444);
+          color: white;
+          font-size: 0.65rem;
+          font-weight: 800;
+          padding: 4px 8px;
+          border-radius: 6px;
+          letter-spacing: 0.05em;
+          box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+          animation: pulse 2s infinite;
+        }
+        .badge-fhd {
+          background: linear-gradient(135deg, #06b6d4, #3b82f6);
+          color: white;
+          font-size: 0.65rem;
+          font-weight: 800;
+          padding: 4px 8px;
+          border-radius: 6px;
+          letter-spacing: 0.05em;
+        }
+        .badge-fps {
+          background: rgba(16, 185, 129, 0.2);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.4);
+          font-size: 0.65rem;
+          font-weight: 700;
+          padding: 3px 7px;
+          border-radius: 6px;
+        }
+        .badge-img {
+          background: rgba(168, 85, 247, 0.2);
+          color: #c084fc;
+          border: 1px solid rgba(168, 85, 247, 0.4);
+          font-size: 0.65rem;
+          font-weight: 700;
+          padding: 3px 7px;
+          border-radius: 6px;
+        }
+        .format-header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .quick-format-pills {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .pill-btn {
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--text-secondary);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 3px 9px;
+          border-radius: 12px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .pill-btn:hover {
+          background: rgba(6, 182, 212, 0.2);
+          color: white;
+          border-color: var(--accent-cyan);
+        }
+        .pill-btn.active {
+          background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+          color: white;
+          border-color: transparent;
+          box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+        }
+        .pill-audio.active {
+          background: linear-gradient(135deg, #ec4899, #8b5cf6);
+        }
         .result-platform {
           font-family: var(--font-heading);
           font-weight: 700;
@@ -357,7 +489,7 @@ export default function ResultCard({ result }) {
         .quality-selector-box {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
         .format-label {
           font-size: 0.8rem;
