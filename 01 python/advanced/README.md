@@ -7,7 +7,7 @@ A social media video downloader with a polished static web interface and a funct
 - Open the static web interface: [index.html](index.html)
 - Run the Python desktop application for real downloads: [main.py](main.py)
 
-The web interface can be opened as a completely static demo, or served by `main.py --web` to connect the form to the local Python downloader. The Python desktop application remains available as a separate interface.
+The web interface can be opened as a completely static demo, or served by `main.py --web` to connect the form to the local Python downloader. The PyQt desktop application remains available as a separate interface.
 
 ## Features
 
@@ -144,12 +144,23 @@ Then:
 ```text
 advanced/
 ├── index.html       # Static web interface and demo interactions
-├── main.py          # Functional PyQt5 downloader application and web bridge
+├── main.py          # Functional PyQt5 downloader and local web bridge
+├── scripts/
+│   └── generate_portrait.py # Generates the branded SVG asset
+├── assets/
+│   └── portrait.svg  # Generated Master Downloader logo
+├── .github/
+│   └── workflows/
+│       └── generate_portrait.yml # Regenerates the SVG on pushes
 ├── README.md        # Project documentation
 └── Downloads/       # Default output folder, created when needed
 ```
 
 `Downloads/` is created by the Python application if it does not already exist. It may not exist in a fresh checkout.
+
+## GitHub Actions
+
+The `generate_portrait.yml` workflow runs on every push to `main` and can also be started manually from the Actions tab. It runs `scripts/generate_portrait.py`, then commits `assets/portrait.svg` back to the repository when the generated file changes. The website references this file at `assets/portrait.svg`, so the published logo stays synchronized with the generator.
 
 ## Security Features
 
