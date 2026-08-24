@@ -68,9 +68,9 @@
                 } catch (error) { busy = false; $('downloadBtn').disabled = false; $('downloadBtn').textContent = 'Try again ->'; $('activity').textContent = 'Local downloader is not available.'; alertUser(error.message); }
                 return;
             }
-            $('activity').textContent = 'Static preview only. Run: python part2.py --web';
+            $('activity').textContent = 'Static preview only. Run: python main.py --web';
             let progress = 0;
-            const timer = setInterval(() => { progress = Math.min(progress + Math.floor(Math.random() * 15) + 8, 100); $('progressFill').style.width = progress + '%'; $('progressPercent').textContent = progress + '%'; $('progressStatus').textContent = progress === 100 ? 'Demo complete' : 'Previewing download'; if (progress === 100) { clearInterval(timer); busy = false; $('downloadBtn').disabled = false; $('downloadBtn').textContent = 'Start another download ->'; $('activity').innerHTML = '<span class="success">Preview complete.</span> Run part2.py --web for real downloads.'; } }, 280);
+            const timer = setInterval(() => { progress = Math.min(progress + Math.floor(Math.random() * 15) + 8, 100); $('progressFill').style.width = progress + '%'; $('progressPercent').textContent = progress + '%'; $('progressStatus').textContent = progress === 100 ? 'Demo complete' : 'Previewing download'; if (progress === 100) { clearInterval(timer); busy = false; $('downloadBtn').disabled = false; $('downloadBtn').textContent = 'Start another download ->'; $('activity').innerHTML = '<span class="success">Preview complete.</span> Run main.py --web for real downloads.'; } }, 280);
         });
     </script>
 </body>

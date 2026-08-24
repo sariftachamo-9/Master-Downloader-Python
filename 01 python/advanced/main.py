@@ -72,14 +72,14 @@ class DownloadWorker(QThread):
                 }]
 
             self.log_signal.emit(f"🔍 Parsing: {self.url}")
-            
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([self.url])
-            
+
             # Find the downloaded file (latest in directory)
             files = [f for f in os.listdir(self.output_dir) if os.path.isfile(os.path.join(self.output_dir, f))]
             latest_file = max(files, key=lambda f: os.path.getctime(os.path.join(self.output_dir, f))) if files else None
-            
+
             if latest_file:
                 self.finished_signal.emit(True, os.path.join(self.output_dir, latest_file))
             else:

@@ -5,9 +5,9 @@ A social media video downloader with a polished static web interface and a funct
 ## Screenshots / Demo
 
 - Open the static web interface: [index.html](index.html)
-- Run the Python desktop application for real downloads: [part2.py](part2.py)
+- Run the Python desktop application for real downloads: [main.py](main.py)
 
-The web interface can be opened as a completely static demo, or served by `part2.py --web` to connect the form to the local Python downloader. The Python desktop application remains available as a separate interface.
+The web interface can be opened as a completely static demo, or served by `main.py --web` to connect the form to the local Python downloader. The Python desktop application remains available as a separate interface.
 
 ## Features
 
@@ -36,7 +36,7 @@ The web interface can be opened as a completely static demo, or served by `part2
 The project has two independent entry points:
 
 1. `index.html` provides the browser interface and static fallback demo.
-2. `part2.py` provides the functional PyQt5 desktop application and optional localhost web bridge.
+2. `main.py` provides the functional PyQt5 desktop application and optional localhost web bridge.
 3. `DownloadWorker` runs desktop downloads in a `QThread` so the desktop interface remains responsive.
 4. The web bridge runs downloads in a background thread and exposes progress through local JSON endpoints.
 5. `yt-dlp` handles extraction, format selection, download progress, and post-processing.
@@ -80,7 +80,7 @@ FFmpeg is required for:
 Install FFmpeg and make sure `ffmpeg.exe` is either:
 
 - Available on your system `PATH`, or
-- Placed beside `part2.py`
+- Placed beside `main.py`
 
 The application also looks for a bundled `ffmpeg.exe` when packaged as an executable.
 
@@ -116,7 +116,7 @@ The static page does not download files when opened directly with a `file:///` U
 Start the local web bridge from the project folder:
 
 ```powershell
-python part2.py --web
+python main.py --web
 ```
 
 Open `http://127.0.0.1:8765` in your browser. The page is then served by Python and the downloader form sends requests to the local API. Downloads are saved in the project `Downloads/` folder.
@@ -128,7 +128,7 @@ Stop the bridge with `Ctrl+C` in the terminal.
 Run:
 
 ```powershell
-python part2.py
+python main.py
 ```
 
 Then:
@@ -144,8 +144,7 @@ Then:
 ```text
 advanced/
 ├── index.html       # Static web interface and demo interactions
-├── part2.py         # Functional PyQt5 downloader application
-├── skills-lock.json # Local skill metadata
+├── main.py          # Functional PyQt5 downloader application and web bridge
 ├── README.md        # Project documentation
 └── Downloads/       # Default output folder, created when needed
 ```
@@ -169,10 +168,10 @@ No automated test suite is currently included.
 Recommended manual checks:
 
 ```powershell
-python -m py_compile part2.py
+python -m py_compile main.py
 ```
 
-Also verify the static page by opening [index.html](index.html) in a browser and testing the theme toggle, empty URL validation, and demo progress flow. For the connected path, run `python part2.py --web`, open `http://127.0.0.1:8765`, and test with a URL you are authorized to download.
+Also verify the static page by opening [index.html](index.html) in a browser and testing the theme toggle, empty URL validation, and demo progress flow. For the connected path, run `python main.py --web`, open `http://127.0.0.1:8765`, and test with a URL you are authorized to download.
 
 ## Future Improvements
 
