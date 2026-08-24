@@ -1,0 +1,18 @@
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+OUTPUT = ROOT / "assets" / "portrait.svg"
+
+SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Master Downloader logo</title>
+  <desc id="desc">Orange MD monogram with a download arrow</desc>
+  <rect width="96" height="96" rx="26" fill="#ff5a36"/>
+  <path d="M48 18v34m0 0 13-13m-13 13L35 39M26 69h44" fill="none" stroke="#141518" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="48" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="#141518">MD</text>
+</svg>
+"""
+
+OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+OUTPUT.write_text(SVG, encoding="utf-8")
+print(f"Generated {OUTPUT.relative_to(ROOT)}")
