@@ -1,0 +1,33 @@
+name: Generate Master Downloader portrait
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-portrait:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Generate portrait SVG
+        run: python "01 python/advanced/scripts/generate_portrait.py"
+
+      - name: Commit generated portrait
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: regenerate portrait SVG"
+          file_pattern: 01 python/advanced/assets/portrait.svg
