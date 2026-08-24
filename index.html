@@ -43,8 +43,9 @@
         function alertUser(message) { $('alertBox').textContent = message; $('alertBox').classList.add('visible'); setTimeout(() => $('alertBox').classList.remove('visible'), 4500); }
         $('pasteBtn').addEventListener('click', async () => { try { const text = await navigator.clipboard.readText(); if (text) { $('urlInput').value = text; $('activity').textContent = 'Clipboard link added. Ready to download.'; } else alertUser('Your clipboard is empty.'); } catch { alertUser('Clipboard access is unavailable here. Paste with Ctrl+V.'); } });
         const qualityMap = { 'Best available': 'Best (Auto 8K/4K)', '1080p HD': '1080p', '720p': '720p', 'Audio only': 'Audio Only (MP3)' };
+        const apiBase = location.port === '8765' ? '' : 'http://127.0.0.1:8765';
         async function pollDownload() {
-            const response = await fetch('/api/status');
+            const response = await fetch(apiBase + '/api/status');
             const state = await response.json();
             $('progressFill').style.width = state.progress + '%';
             $('progressPercent').textContent = state.progress + '%';
@@ -61,14 +62,14 @@
             busy = true; $('downloadBtn').disabled = true; $('downloadBtn').textContent = 'Preparing...'; $('activity').textContent = 'Connecting to the local downloader...'; $('progressFill').style.width = '0%'; $('progressPercent').textContent = '0%';
             if (location.protocol === 'http:' || location.protocol === 'https:') {
                 try {
-                    const response = await fetch('/api/download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, quality: qualityMap[$('qualitySelect').value] }) });
+                    const response = await fetch(apiBase + '/api/download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, quality: qualityMap[$('qualitySelect').value] }) });
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error || 'Unable to start download.');
                     pollDownload();
                 } catch (error) { busy = false; $('downloadBtn').disabled = false; $('downloadBtn').textContent = 'Try again ->'; $('activity').textContent = 'Local downloader is not available.'; alertUser(error.message); }
                 return;
             }
-            $('activity').textContent = 'Static preview only. Run: python part2.py --web';
+            $('activity').textContent = 'Static preview only. Run: python main.py --web';
             let progress = 0;
             const timer = setInterval(() => { progress = Math.min(progress + Math.floor(Math.random() * 15) + 8, 100); $('progressFill').style.width = progress + '%'; $('progressPercent').textContent = progress + '%'; $('progressStatus').textContent = progress === 100 ? 'Demo complete' : 'Previewing download'; if (progress === 100) { clearInterval(timer); busy = false; $('downloadBtn').disabled = false; $('downloadBtn').textContent = 'Start another download ->'; $('activity').innerHTML = '<span class="success">Preview complete.</span> Run part2.py --web for real downloads.'; } }, 280);
         });
