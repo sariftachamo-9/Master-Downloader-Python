@@ -7,7 +7,7 @@ A social media video downloader with a polished static web interface and a funct
 - Open the static web interface: [index.html](index.html)
 - Run the Python desktop application for real downloads: [part2.py](part2.py)
 
-The web interface is completely static. Its download flow is a visual demo and does not connect to a server. The Python application performs the actual downloads.
+The web interface can be opened as a completely static demo, or served by `part2.py --web` to connect the form to the local Python downloader. The Python desktop application remains available as a separate interface.
 
 ## Features
 
@@ -35,10 +35,11 @@ The web interface is completely static. Its download flow is a visual demo and d
 
 The project has two independent entry points:
 
-1. `index.html` provides a client-only presentation and interaction demo.
-2. `part2.py` provides the functional PyQt5 desktop application.
-3. `DownloadWorker` runs downloads in a `QThread` so the desktop interface remains responsive.
-4. `yt-dlp` handles extraction, format selection, download progress, and post-processing.
+1. `index.html` provides the browser interface and static fallback demo.
+2. `part2.py` provides the functional PyQt5 desktop application and optional localhost web bridge.
+3. `DownloadWorker` runs desktop downloads in a `QThread` so the desktop interface remains responsive.
+4. The web bridge runs downloads in a background thread and exposes progress through local JSON endpoints.
+5. `yt-dlp` handles extraction, format selection, download progress, and post-processing.
 
 ## Installation
 
@@ -108,7 +109,19 @@ Open [index.html](index.html) directly in a browser. The page works without a se
 - Simulated download progress
 - Light/dark theme switching
 
-The static page does not download files.
+The static page does not download files when opened directly with a `file:///` URL. The form runs a visual preview in that mode.
+
+### Connected web interface
+
+Start the local web bridge from the project folder:
+
+```powershell
+python part2.py --web
+```
+
+Open `http://127.0.0.1:8765` in your browser. The page is then served by Python and the downloader form sends requests to the local API. Downloads are saved in the project `Downloads/` folder.
+
+Stop the bridge with `Ctrl+C` in the terminal.
 
 ### Functional desktop application
 
@@ -159,7 +172,7 @@ Recommended manual checks:
 python -m py_compile part2.py
 ```
 
-Also verify the static page by opening [index.html](index.html) in a browser and testing the theme toggle, empty URL validation, and demo progress flow.
+Also verify the static page by opening [index.html](index.html) in a browser and testing the theme toggle, empty URL validation, and demo progress flow. For the connected path, run `python part2.py --web`, open `http://127.0.0.1:8765`, and test with a URL you are authorized to download.
 
 ## Future Improvements
 

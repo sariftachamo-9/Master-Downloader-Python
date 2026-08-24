@@ -1,6 +1,9 @@
 import sys
 import os
 import shutil
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -307,10 +310,163 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Download Failed", f"Error:\n\n{message}")
 
 
+# ================== Local Web Bridge ==================
+WEB_STATE = {
+    "active": False,
+    "progress": 0,
+    "status": "Ready",
+    "message": "",
+    "success": False,
+}
+WEB_STATE_LOCK = threading.Lock()
+
+
+def find_ffmpeg():
+    base_path = sys._MEIPASS if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
+    bundled_path = os.path.join(base_path, "ffmpeg.exe")
+    if os.path.exists(bundled_path):
+        return bundled_path
+    return shutil.which("ffmpeg")
+
+
+def set_web_state(**values):
+    with WEB_STATE_LOCK:
+        WEB_STATE.update(values)
+
+
+def run_web_download(url, quality):
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Downloads")
+    ffmpeg_path = find_ffmpeg()
+    use_merge = bool(ffmpeg_path)
+
+    if quality == "Audio Only (MP3)" and not use_merge:
+        set_web_state(active=False, status="Failed", message="FFmpeg is required for MP3 extraction.", success=False)
+        return
+
+    format_map = {
+        "Best (Auto 8K/4K)": "bestvideo+bestaudio/best",
+        "1080p": "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+        "720p": "bestvideo[height<=720]+bestaudio/best[height<=720]",
+        "480p": "bestvideo[height<=480]+bestaudio/best[height<=480]",
+        "Audio Only (MP3)": "bestaudio/best",
+    }
+    format_string = format_map.get(quality, "best") if use_merge else "best"
+
+    def progress_hook(data):
+        if data.get("status") == "downloading":
+            percent = data.get("_percent_str", "0%").strip("%").replace("%", "")
+            try:
+                set_web_state(progress=int(float(percent)), status="Downloading")
+            except ValueError:
+                pass
+        elif data.get("status") == "finished":
+            set_web_state(progress=100, status="Processing")
+
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+        ydl_opts = {
+            "format": format_string,
+            "outtmpl": os.path.join(output_dir, "%(title)s.%(ext)s"),
+            "merge_output_format": "mp4",
+            "ffmpeg_location": ffmpeg_path if use_merge else None,
+            "progress_hooks": [progress_hook],
+            "quiet": True,
+            "no_warnings": False,
+            "extractor_args": {"youtube": {"player_client": ["tv_embedded"]}},
+        }
+        if quality == "Audio Only (MP3)":
+            ydl_opts["postprocessors"] = [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "320",
+            }]
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+        files = [name for name in os.listdir(output_dir) if os.path.isfile(os.path.join(output_dir, name))]
+        latest_file = max(files, key=lambda name: os.path.getctime(os.path.join(output_dir, name))) if files else None
+        if not latest_file:
+            raise RuntimeError("File not found after download.")
+        set_web_state(active=False, progress=100, status="Complete", message=os.path.join(output_dir, latest_file), success=True)
+    except Exception as error:
+        set_web_state(active=False, status="Failed", message=str(error), success=False)
+
+
+class WebBridgeHandler(BaseHTTPRequestHandler):
+    def send_json(self, payload, status=200):
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_GET(self):
+        if self.path == "/" or self.path == "/index.html":
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html"), "rb") as page:
+                body = page.read()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if self.path == "/api/status":
+            with WEB_STATE_LOCK:
+                self.send_json(WEB_STATE.copy())
+            return
+        self.send_json({"error": "Not found"}, 404)
+
+    def do_POST(self):
+        if self.path != "/api/download":
+            self.send_json({"error": "Not found"}, 404)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            request = json.loads(self.rfile.read(length).decode("utf-8"))
+            url = str(request.get("url", "")).strip()
+            quality = request.get("quality", "Best (Auto 8K/4K)")
+            allowed_quality = {"Best (Auto 8K/4K)", "1080p", "720p", "480p", "Audio Only (MP3)"}
+            if not url.startswith(("http://", "https://")) or quality not in allowed_quality:
+                self.send_json({"error": "Provide a valid HTTP(S) URL and quality."}, 400)
+                return
+            with WEB_STATE_LOCK:
+                if WEB_STATE["active"]:
+                    self.send_json({"error": "A download is already running."}, 409)
+                    return
+                WEB_STATE.update(active=True, progress=0, status="Preparing", message="", success=False)
+            threading.Thread(target=run_web_download, args=(url, quality), daemon=True).start()
+            self.send_json({"started": True})
+        except (ValueError, json.JSONDecodeError) as error:
+            self.send_json({"error": "Invalid request: " + str(error)}, 400)
+
+    def log_message(self, format_string, *args):
+        return
+
+
+def run_web_mode():
+    server = ThreadingHTTPServer(("127.0.0.1", 8765), WebBridgeHandler)
+    print("Master Downloader web mode: http://127.0.0.1:8765")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        server.server_close()
+
+
 # ================== Run ==================
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    app.setStyle("Fusion")
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
+    if "--web" in sys.argv:
+        run_web_mode()
+    else:
+        app = QApplication(sys.argv)
+        app.setStyle("Fusion")
+        window = MainWindow()
+        window.show()
+        sys.exit(app.exec_())

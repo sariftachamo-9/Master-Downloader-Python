@@ -42,7 +42,36 @@
         syncThemeControl();
         function alertUser(message) { $('alertBox').textContent = message; $('alertBox').classList.add('visible'); setTimeout(() => $('alertBox').classList.remove('visible'), 4500); }
         $('pasteBtn').addEventListener('click', async () => { try { const text = await navigator.clipboard.readText(); if (text) { $('urlInput').value = text; $('activity').textContent = 'Clipboard link added. Ready to download.'; } else alertUser('Your clipboard is empty.'); } catch { alertUser('Clipboard access is unavailable here. Paste with Ctrl+V.'); } });
-        $('downloadBtn').addEventListener('click', () => { if (busy) return; if (!$('urlInput').value.trim()) { alertUser('Add a video URL to begin.'); $('urlInput').focus(); return; } busy = true; $('downloadBtn').disabled = true; $('downloadBtn').textContent = 'Preparing...'; $('activity').textContent = 'Reading source metadata...'; let progress = 0; const timer = setInterval(() => { progress = Math.min(progress + Math.floor(Math.random() * 15) + 8, 100); $('progressFill').style.width = progress + '%'; $('progressPercent').textContent = progress + '%'; $('progressStatus').textContent = progress === 100 ? 'Download complete' : 'Downloading your file'; if (progress > 65) $('activity').textContent = 'Packaging media for ' + $('qualitySelect').value + '...'; if (progress === 100) { clearInterval(timer); busy = false; $('downloadBtn').disabled = false; $('downloadBtn').textContent = 'Start another download ->'; $('activity').innerHTML = '<span class="success">Complete.</span> Static demo finished. Run part2.py for real downloads.'; } }, 280); });
+        const qualityMap = { 'Best available': 'Best (Auto 8K/4K)', '1080p HD': '1080p', '720p': '720p', 'Audio only': 'Audio Only (MP3)' };
+        async function pollDownload() {
+            const response = await fetch('/api/status');
+            const state = await response.json();
+            $('progressFill').style.width = state.progress + '%';
+            $('progressPercent').textContent = state.progress + '%';
+            $('progressStatus').textContent = state.status;
+            if (state.active) { $('activity').textContent = state.status + ' media...'; setTimeout(pollDownload, 700); return; }
+            busy = false; $('downloadBtn').disabled = false;
+            if (state.success) { $('activity').innerHTML = '<span class="success">Complete.</span> Saved to Downloads.'; $('downloadBtn').textContent = 'Start another download ->'; }
+            else { $('activity').textContent = state.message || 'Download failed.'; $('downloadBtn').textContent = 'Try again ->'; alertUser(state.message || 'The download failed.'); }
+        }
+        $('downloadBtn').addEventListener('click', async () => {
+            if (busy) return;
+            const url = $('urlInput').value.trim();
+            if (!url) { alertUser('Add a video URL to begin.'); $('urlInput').focus(); return; }
+            busy = true; $('downloadBtn').disabled = true; $('downloadBtn').textContent = 'Preparing...'; $('activity').textContent = 'Connecting to the local downloader...'; $('progressFill').style.width = '0%'; $('progressPercent').textContent = '0%';
+            if (location.protocol === 'http:' || location.protocol === 'https:') {
+                try {
+                    const response = await fetch('/api/download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, quality: qualityMap[$('qualitySelect').value] }) });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Unable to start download.');
+                    pollDownload();
+                } catch (error) { busy = false; $('downloadBtn').disabled = false; $('downloadBtn').textContent = 'Try again ->'; $('activity').textContent = 'Local downloader is not available.'; alertUser(error.message); }
+                return;
+            }
+            $('activity').textContent = 'Static preview only. Run: python part2.py --web';
+            let progress = 0;
+            const timer = setInterval(() => { progress = Math.min(progress + Math.floor(Math.random() * 15) + 8, 100); $('progressFill').style.width = progress + '%'; $('progressPercent').textContent = progress + '%'; $('progressStatus').textContent = progress === 100 ? 'Demo complete' : 'Previewing download'; if (progress === 100) { clearInterval(timer); busy = false; $('downloadBtn').disabled = false; $('downloadBtn').textContent = 'Start another download ->'; $('activity').innerHTML = '<span class="success">Preview complete.</span> Run part2.py --web for real downloads.'; } }, 280);
+        });
     </script>
 </body>
 </html>
